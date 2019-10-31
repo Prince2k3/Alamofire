@@ -1556,7 +1556,7 @@ public class WebSocketRequest: DataRequest {
         receiveString = completion
     }
     
-    public func receive<T: Decodable>(decoder: JSONDecoder = .init(), completion: @escaping (Result<T?, Error>) -> Void) {
+    public func received<T: Decodable>(decoder: JSONDecoder = .init(), _ completion: @escaping (Result<T?, Error>) -> Void) {
         receivedData { result in
             switch result {
             case let .success(data):
