@@ -815,7 +815,16 @@ open class Session {
         case let r as DataRequest: perform(r)
         case let r as UploadRequest: perform(r)
         case let r as DownloadRequest: perform(r)
-        default: fatalError("Attempted to perform unsupported Request subclass: \(type(of: request))")
+        default:
+            
+            if #available(iOS 13, *),
+                request is WebSocketRequest {
+                
+                perform(request)
+                return
+            }
+            
+            fatalError("Attempted to perform unsupported Request subclass: \(type(of: request))")
         }
     }
 
@@ -826,6 +835,19 @@ open class Session {
             self.activeRequests.insert(request)
 
             self.performSetupOperations(for: request, convertible: request.convertible)
+        }
+    }
+    
+    @available(iOS 13, *)
+    func perform(_ request: WebSocketRequest) {
+        requestQueue.async {
+            guard !request.isCancelled else { return }
+
+            self.activeRequests.insert(request)
+
+            self.performSetupOperations(for: request, convertible: request.convertible)
+            
+            request.sendMessage()
         }
     }
 
@@ -1035,5 +1057,23 @@ extension Session: SessionStateProvider {
 
     func cancelRequestsForSessionInvalidation(with error: Error?) {
         requestTaskMap.requests.forEach { $0.finish(error: AFError.sessionInvalidated(error: error)) }
+    }
+}
+
+
+extension Session {
+    @available(iOS 13, *)
+    func websocket(_ convertible: URLRequestConvertible, message: URLSessionWebSocketTask.Message) -> WebSocketRequest {
+        let request = WebSocketRequest(convertible: convertible,
+                                  message: message,
+                                  underlyingQueue: rootQueue,
+                                  serializationQueue: serializationQueue,
+                                  eventMonitor: eventMonitor,
+                                  interceptor: interceptor,
+                                  delegate: self)
+
+        perform(request)
+
+        return request
     }
 }

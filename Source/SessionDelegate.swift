@@ -303,3 +303,14 @@ extension SessionDelegate: URLSessionDownloadDelegate {
         }
     }
 }
+
+@available(iOS 13, *)
+extension SessionDelegate: URLSessionWebSocketDelegate {
+    public func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
+        //TODO: Event Monitoring
+    }
+    
+    public func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
+        //TODO: Event Monitoring
+    }
+}

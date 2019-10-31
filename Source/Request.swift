@@ -1459,3 +1459,142 @@ extension UploadRequest.Uploadable: UploadableConvertible {
 
 /// A type that can be converted to an upload, whether from an `UploadRequest.Uploadable` or `URLRequestConvertible`.
 public protocol UploadConvertible: UploadableConvertible & URLRequestConvertible {}
+
+
+@available(iOS 13, *)
+public class WebSocketRequest: DataRequest {
+    public enum WebSocketMessagable {
+        case data(Data)
+        case string(String)
+        
+    }
+    
+    private weak var webSocketTask: URLSessionWebSocketTask?
+    private let message: URLSessionWebSocketTask.Message?
+    private var receiveData: ((Result<Data, Error>) -> Void)?
+    private var receiveString: ((Result<String, Error>) -> Void)?
+    
+    init(id: UUID = UUID(),
+         convertible: URLRequestConvertible,
+         message: URLSessionWebSocketTask.Message,
+         underlyingQueue: DispatchQueue,
+         serializationQueue: DispatchQueue,
+         eventMonitor: EventMonitor?,
+         interceptor: RequestInterceptor?,
+         delegate: RequestDelegate) {
+        
+        self.message = message
+        super.init(
+            convertible: convertible,
+            underlyingQueue: underlyingQueue,
+            serializationQueue: serializationQueue,
+            eventMonitor: eventMonitor,
+            interceptor: interceptor,
+            delegate: delegate
+        )
+    }
+    
+    override func task(for request: URLRequest, using session: URLSession) -> URLSessionTask {
+        let copiedRequest = request
+        let webSocketTask = session.webSocketTask(with: copiedRequest)
+        defer { self.webSocketTask = webSocketTask }
+        return webSocketTask
+    }
+    
+    func sendMessage() {
+        guard let message = message else {
+            fatalError("Attempting to send a message when URLSessionWebSocketTask.Message value doesn't exist.")
+        }
+        
+        send(message) 
+    }
+    
+    func send(_ message: URLSessionWebSocketTask.Message) {
+        guard let webSocketTask = webSocketTask else {
+            fatalError("Unable to send message because URLSessionWebSocketTask not set")
+        }
+        
+        webSocketTask.send(message) { error in
+            guard let error = error else { return }
+            self.didFailTask(webSocketTask, earlyWithError: AFError.createURLRequestFailed(error: error))
+        }
+    }
+    
+    public func close() {
+        webSocketTask?.cancel(with: .goingAway, reason: nil)
+        cancel()
+    }
+    
+    public func listenForData() {
+        guard let webSocketTask = webSocketTask else {
+            fatalError("Unable to send message because URLSessionWebSocketTask not set")
+        }
+        
+        webSocketTask.receive { sessionResult in
+            switch sessionResult {
+            case let .success(message):
+                if case let .data(value) = message {
+                    self.receiveData?(.success(value))
+                }
+            case let .failure(error):
+                self.receiveData?(.failure(error))
+            }
+        }
+    }
+    
+    public func listenForString() {
+        guard let webSocketTask = webSocketTask else {
+            fatalError("Unable to send message because URLSessionWebSocketTask not set")
+        }
+        
+        webSocketTask.receive { sessionResult in
+            switch sessionResult {
+            case let .success(message):
+                if case let .string(value) = message {
+                    self.receiveString?(.success(value))
+                }
+            case let .failure(error):
+                self.receiveString?(.failure(error))
+            }
+        }
+    }
+    
+    public func receivedData(_ completion: @escaping (Result<Data, Error>) -> Void) {
+        receiveData = completion
+    }
+    
+    public func receivedString(_ completion: @escaping (Result<String, Error>) -> Void) {
+        receiveString = completion
+    }
+    
+    public func receive<T: Decodable>(decoder: JSONDecoder = .init(), completion: @escaping (Result<T?, Error>) -> Void) {
+        receivedData { result in
+            switch result {
+            case let .success(data):
+                do {
+                    let decodable = try decoder.decode(T.self, from: data)
+                    completion(.success(decodable))
+                }
+                catch { completion(.failure(error)) }
+            case let .failure(error):
+                completion(.failure(error))
+            }
+        }
+    }
+    
+    public func ping(wait: TimeInterval = 10) {
+        guard let webSocketTask = webSocketTask else {
+            fatalError("Unable to send message because URLSessionWebSocketTask not set")
+        }
+        
+        webSocketTask.sendPing { error in
+            if let error = error {
+                self.didFailTask(webSocketTask, earlyWithError: AFError.createURLRequestFailed(error: error))
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + wait) {
+                self.ping()
+            }
+        }
+    }
+}
