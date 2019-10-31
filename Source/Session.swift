@@ -816,14 +816,6 @@ open class Session {
         case let r as UploadRequest: perform(r)
         case let r as DownloadRequest: perform(r)
         default:
-            
-            if #available(iOS 13, *),
-                request is WebSocketRequest {
-                
-                perform(request)
-                return
-            }
-            
             fatalError("Attempted to perform unsupported Request subclass: \(type(of: request))")
         }
     }
@@ -838,19 +830,6 @@ open class Session {
         }
     }
     
-    @available(iOS 13, *)
-    func perform(_ request: WebSocketRequest) {
-        requestQueue.async {
-            guard !request.isCancelled else { return }
-
-            self.activeRequests.insert(request)
-
-            self.performSetupOperations(for: request, convertible: request.convertible)
-            
-            request.sendMessage()
-        }
-    }
-
     func perform(_ request: UploadRequest) {
         requestQueue.async {
             guard !request.isCancelled else { return }
@@ -1080,7 +1059,9 @@ extension Session {
                                   delegate: self)
 
         perform(request)
-
+        
+        request.sendMessage()
+        request.listen()
         return request
     }
 }

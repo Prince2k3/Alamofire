@@ -1520,12 +1520,7 @@ public class WebSocketRequest: DataRequest {
         }
     }
     
-    public func close() {
-        webSocketTask?.cancel(with: .goingAway, reason: nil)
-        cancel()
-    }
-    
-    public func listenForData() {
+    func listen() {
         guard let webSocketTask = webSocketTask else {
             fatalError("Unable to send message because URLSessionWebSocketTask not set")
         }
@@ -1533,30 +1528,24 @@ public class WebSocketRequest: DataRequest {
         webSocketTask.receive { sessionResult in
             switch sessionResult {
             case let .success(message):
-                if case let .data(value) = message {
+                switch message {
+                case let .data(value):
                     self.receiveData?(.success(value))
+                case let .string(value):
+                   self.receiveString?(.success(value))
+                @unknown default:
+                    fatalError("URLSessionWebSocket is return data not handled by Alamofire.")
                 }
             case let .failure(error):
-                self.receiveData?(.failure(error))
-            }
-        }
-    }
-    
-    public func listenForString() {
-        guard let webSocketTask = webSocketTask else {
-            fatalError("Unable to send message because URLSessionWebSocketTask not set")
-        }
-        
-        webSocketTask.receive { sessionResult in
-            switch sessionResult {
-            case let .success(message):
-                if case let .string(value) = message {
-                    self.receiveString?(.success(value))
-                }
-            case let .failure(error):
+                self.receiveData?(.failure(error)) ??
                 self.receiveString?(.failure(error))
             }
         }
+    }
+    
+    public func close() {
+        webSocketTask?.cancel(with: .goingAway, reason: nil)
+        cancel()
     }
     
     public func receivedData(_ completion: @escaping (Result<Data, Error>) -> Void) {
