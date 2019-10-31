@@ -1060,10 +1060,17 @@ extension Session: SessionStateProvider {
     }
 }
 
-
+@available(iOS 13, *)
 extension Session {
-    @available(iOS 13, *)
-    func websocket(_ convertible: URLRequestConvertible, message: URLSessionWebSocketTask.Message) -> WebSocketRequest {
+    public func openWebsocket(_ convertible: URLRequestConvertible, message string: String) -> WebSocketRequest {
+        return openWebsocket(convertible, message: .string(string))
+    }
+    
+    public func openWebsocket(_ convertible: URLRequestConvertible, message data: Data) -> WebSocketRequest {
+        return openWebsocket(convertible, message: .data(data))
+    }
+    
+    func openWebsocket(_ convertible: URLRequestConvertible, message: URLSessionWebSocketTask.Message) -> WebSocketRequest {
         let request = WebSocketRequest(convertible: convertible,
                                   message: message,
                                   underlyingQueue: rootQueue,
