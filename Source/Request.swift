@@ -1476,7 +1476,7 @@ public class WebSocketRequest: DataRequest {
     
     init(id: UUID = UUID(),
          convertible: URLRequestConvertible,
-         message: URLSessionWebSocketTask.Message,
+         message: URLSessionWebSocketTask.Message?,
          underlyingQueue: DispatchQueue,
          serializationQueue: DispatchQueue,
          eventMonitor: EventMonitor?,
@@ -1502,11 +1502,9 @@ public class WebSocketRequest: DataRequest {
     }
     
     func sendMessage() {
-        guard let message = message else {
-            fatalError("Attempting to send a message when URLSessionWebSocketTask.Message value doesn't exist.")
+        if let message = self.message {
+            send(message)
         }
-        
-        send(message) 
     }
     
     func send(_ message: URLSessionWebSocketTask.Message) {

@@ -1041,15 +1041,19 @@ extension Session: SessionStateProvider {
 
 @available(iOS 13, *)
 extension Session {
-    public func openWebsocket(_ convertible: URLRequestConvertible, message string: String) -> WebSocketRequest {
-        return openWebsocket(convertible, message: .string(string))
+    public func openWebSocket(_ convertible: URLRequestConvertible, andSend string: String) -> WebSocketRequest {
+        return openWebSocket(convertible, andSend: .string(string))
     }
     
-    public func openWebsocket(_ convertible: URLRequestConvertible, message data: Data) -> WebSocketRequest {
-        return openWebsocket(convertible, message: .data(data))
+    public func openWebSocket(_ convertible: URLRequestConvertible, sendMessage data: Data) -> WebSocketRequest {
+        return openWebSocket(convertible, andSend: .data(data))
     }
     
-    func openWebsocket(_ convertible: URLRequestConvertible, message: URLSessionWebSocketTask.Message) -> WebSocketRequest {
+    public func openWebSocket(_ convertible: URLRequestConvertible) -> WebSocketRequest {
+        return openWebSocket(convertible, andSend: nil)
+    }
+    
+    func openWebSocket(_ convertible: URLRequestConvertible, andSend message: URLSessionWebSocketTask.Message? = nil) -> WebSocketRequest {
         let request = WebSocketRequest(convertible: convertible,
                                   message: message,
                                   underlyingQueue: rootQueue,
