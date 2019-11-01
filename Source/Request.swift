@@ -1516,6 +1516,10 @@ public class WebSocketRequest: DataRequest {
             fatalError("Unable to send message because URLSessionWebSocketTask not set")
         }
         
+        if webSocketTask.state != .running {
+            resume()
+        }
+        
         webSocketTask.send(message) { error in
             guard let error = error else { return }
             self.didFailTask(webSocketTask, earlyWithError: AFError.createURLRequestFailed(error: error))
@@ -1525,6 +1529,10 @@ public class WebSocketRequest: DataRequest {
     func listen() {
         guard let webSocketTask = lastTask as? URLSessionWebSocketTask else {
             fatalError("Unable to send message because URLSessionWebSocketTask not set")
+        }
+        
+        if webSocketTask.state != .running {
+            resume()
         }
         
         webSocketTask.receive { sessionResult in
@@ -1580,6 +1588,10 @@ public class WebSocketRequest: DataRequest {
     public func ping(wait: TimeInterval = 10) {
         guard let webSocketTask = lastTask as? URLSessionWebSocketTask else {
             fatalError("Unable to send message because URLSessionWebSocketTask not set")
+        }
+        
+        if webSocketTask.state != .running {
+            resume()
         }
         
         webSocketTask.sendPing { error in
