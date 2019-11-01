@@ -1501,6 +1501,12 @@ public class WebSocketRequest: DataRequest {
         return webSocketTask
     }
     
+    override func didCreateTask(_ task: URLSessionTask) {
+        listen()
+        sendMessage()
+        super.didCreateTask(task)
+    }
+    
     func sendMessage() {
         if let message = self.message {
             send(message)

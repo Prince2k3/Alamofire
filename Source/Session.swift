@@ -827,13 +827,6 @@ open class Session {
             self.activeRequests.insert(request)
 
             self.performSetupOperations(for: request, convertible: request.convertible)
-            
-            if #available(iOS 13, *) {
-                if let request = request as? WebSocketRequest {
-                    request.listen()
-                    request.sendMessage()
-                }
-            }
         }
     }
     
@@ -1070,7 +1063,8 @@ extension Session {
                                   delegate: self)
 
         perform(request)
-    
+        
+
         return request
     }
 }
